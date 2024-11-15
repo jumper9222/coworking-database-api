@@ -50,6 +50,20 @@ app.get("/booking/:user_id", async (req, res) => {
     }
 })
 
+app.get("/booking/:user_id/:booking_id", async (req, res) => {
+    const { user_id, booking_id } = req.params;
+    const client = await pool.connect();
+    try {
+        const posts = await client.query("SELECT * FROM bookings WHERE user_id = $1 AND id = $2", [user_id, booking_id]);
+        res.json(posts.rows[0]);
+    } catch (error) {
+        console.error("Error executing query", error.stack);
+        res.status(500).json({ error: "Internal Server Error" });
+    } finally {
+        client.release();
+    }
+})
+
 app.post("/booking", async (req, res) => {
     const { seatType, date, time, phoneNumber, email, userId } = req.body;
     const client = await pool.connect();
