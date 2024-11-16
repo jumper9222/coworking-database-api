@@ -106,6 +106,25 @@ app.put("/booking/:booking_id", async (req, res) => {
     }
 })
 
+app.delete("/booking/:booking_id", async (req, res) => {
+    const { booking_id } = req.params;
+    const { userId } = req.body;
+    const client = await pool.connect();
+    try {
+        const post = await client.query("DELETE FROM bookings WHERE id = $1 AND user_id = $2 RETURNING *", [booking_id, userId]);
+        if (post.rows.length > 0) {
+            res.status(200).json({ post: post.rows[0], message: "Post deleted successfully" });
+        } else {
+            res.status(404).json({ error: "Post not found" });
+        }
+    } catch (error) {
+        console.error("Error executing query", error.stack);
+        res.status(500).json({ error: "Internal Server Error" });
+    } finally {
+        client.release();
+    }
+})
+
 app.listen(3001, () => {
     console.log("Server is running on port 3001 `");
 })
