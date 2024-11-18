@@ -65,12 +65,12 @@ app.get("/booking/:user_id/:booking_id", async (req, res) => {
 })
 
 app.post("/booking", async (req, res) => {
-    const { seatType, date, time, phoneNumber, email, userId } = req.body;
+    const { seatType, date, startTime, endTime, phoneNumber, email, userId } = req.body;
     const client = await pool.connect();
     try {
         const response = await client.query(
-            "INSERT INTO bookings (title, date, time, phone_number, email, user_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-            [seatType, date, time, phoneNumber, email, userId]
+            "INSERT INTO bookings (title, date, start_time, end_time, phone_number, email, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+            [seatType, date, startTime, endTime, phoneNumber, email, userId]
         );
         res.status(201).json(response.rows[0]);
         res.json(response.rows[0]);
@@ -85,12 +85,12 @@ app.post("/booking", async (req, res) => {
 
 app.put("/booking/:booking_id", async (req, res) => {
     const { booking_id } = req.params;
-    const { seatType, date, time, phoneNumber, email, userId } = req.body;
+    const { seatType, date, startTime, endTime, phoneNumber, email, userId } = req.body;
     const client = await pool.connect();
     try {
         const post = await client.query(
-            "UPDATE bookings SET title = $1, date = $2, time = $3, phone_number = $4, email = $5 WHERE id = $6 AND user_id = $7 RETURNING *",
-            [seatType, date, time, phoneNumber, email, booking_id, userId]
+            "UPDATE bookings SET title = $1, date = $2, start_time = $3, end_time = $4, phone_number = $5, email = $6 WHERE id = $7 AND user_id = $8 RETURNING *",
+            [seatType, date, startTime, endTime, phoneNumber, email, booking_id, userId]
         );
         if (post.rows.length > 0) {
             res.json(post.rows[0]);
