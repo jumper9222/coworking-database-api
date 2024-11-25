@@ -1,6 +1,5 @@
 const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
-const serviceAccount = require("../serviceAccountKey.json");
 const {
     FIREBASE_TYPE,
     FIREBASE_PROJECT_ID,
