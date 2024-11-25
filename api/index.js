@@ -1,8 +1,18 @@
 let express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
+const { google } = require('googleapis')
+const { firestore } = require('./firebase')
 require("dotenv").config();
-let { PGHOST, PGDATABASE, PGUSER, PGPASSWORD } = process.env;
+let {
+    PGHOST,
+    PGDATABASE,
+    PGUSER,
+    PGPASSWORD,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_CLIENT_ID,
+    GOOGLE_REDIRECT_URI,
+} = process.env;
 PGPASSWORD = decodeURIComponent(PGPASSWORD);
 
 let app = express();
@@ -19,6 +29,17 @@ const pool = new Pool({
         rejectUnauthorized: false,
     },
 });
+
+async function saveUserTokens(userId, tokens) {
+    const userRef = firestore.collection('users').doc(userId);
+    await userRef.set({ tokens }, { merge: true });
+}
+
+async function loadTokensFromFirestore(userId) {
+    const userRef = firestore.collection('users').doc(userId);
+    const doc = await userRef.get();
+    return doc.exists ? doc.data().tokens : null;
+}
 
 async function getPostgresVersion() {
     const client = await pool.connect();
@@ -73,7 +94,6 @@ app.post("/booking", async (req, res) => {
             [seatType, date, startTime, endTime, phoneNumber, email, userId]
         );
         res.status(201).json(response.rows[0]);
-        res.json(response.rows[0]);
         console.log({ post: response.rows[0], message: "Booking created successfully" });
     } catch (error) {
         res.status(500).send(error);
@@ -122,6 +142,59 @@ app.delete("/booking/:booking_id", async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     } finally {
         client.release();
+    }
+})
+
+app.post('/exchange-code', async (req, res) => {
+    const { code, userId } = req.body;
+    const oAuth2Client = new google.auth.OAuth2(
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        'postmessage'
+    )
+
+    try {
+        const { tokens } = await oAuth2Client.getToken(code);
+        await saveUserTokens(userId, tokens);
+        res.status(200).json({ message: 'Tokens saved successfully' })
+    } catch (error) {
+        console.error('Error excange code', error)
+        res.status(500).json({ message: 'Failed to exchange code' })
+    }
+})
+
+app.post('/add-to-calendar', async (req, res) => {
+    const { event, userId } = req.body;
+
+    try {
+        const { access_token, refresh_token } = await loadTokensFromFirestore(userId)
+
+        const oAuth2Client = new google.auth.OAuth2(
+            GOOGLE_CLIENT_ID,
+            GOOGLE_CLIENT_SECRET,
+        );
+
+        oAuth2Client.setCredentials({ access_token, refresh_token })
+
+        oAuth2Client.on('tokens', (tokens) => {
+            if (tokens.refresh_token) {
+                saveUserTokens(userId, tokens)
+            }
+        })
+
+        const calendar = google.calendar({
+            version: 'v3',
+            auth: oAuth2Client
+        });
+
+        const response = await calendar.events.insert({
+            calendarId: 'primary',
+            resource: event
+        })
+        res.status(200).json({ message: 'Calendar event added successfully', response: response.data })
+    } catch (error) {
+        console.error('Error adding calendar event', error)
+        res.status(500).json({ message: 'Failed to add event to calendar' })
     }
 })
 
