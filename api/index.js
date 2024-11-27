@@ -198,6 +198,21 @@ app.post('/add-to-calendar', async (req, res) => {
     }
 })
 
+app.get('/check-connection-status', async (req, res) => {
+    const { userId } = req.body;
+
+    try {
+        const tokens = await loadTokensFromFirestore(userId);
+        if (tokens) {
+            res.json({ connectionStatus: true })
+        } else {
+            res.json({ connectionStatus: false })
+        }
+    } catch (error) {
+        console.error('Error fetching access token', error)
+    }
+})
+
 app.listen(3001, () => {
     console.log("Server is running on port 3001 `");
 })
