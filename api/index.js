@@ -199,7 +199,7 @@ app.post('/add-to-calendar', async (req, res) => {
 })
 
 app.get('/check-connection-status', async (req, res) => {
-    const { userId } = req.body;
+    const { userId } = req.query;
 
     try {
         const tokens = await loadTokensFromFirestore(userId);
